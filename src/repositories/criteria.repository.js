@@ -49,6 +49,20 @@ class CriteriaRepository {
             client.release();
         }
     }
+
+static async getAllCriteriaFrequency() {
+  const result = await db.query(`
+SELECT 
+LOWER(REPLACE(criteria_name, ' ', '_')) AS criteria_name,
+COUNT(*) as total
+FROM criteria
+GROUP BY LOWER(REPLACE(criteria_name, ' ', '_'))
+ORDER BY total DESC
+LIMIT 3
+  `);
+
+  return result.rows;
+}
     
 }
 

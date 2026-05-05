@@ -66,6 +66,40 @@ class AlternativeRepository {
             client.release();
         }
     }
+
+static async findAllWithCriteria() {
+  const result = await db.query(`
+    SELECT 
+      a.alternative_id,
+      a.alternative_name,
+      c.criteria_name,
+      v.value
+    FROM alternatives a
+    JOIN alternative_values v ON a.alternative_id = v.alternative_id
+    JOIN criteria c ON v.criteria_id = c.criteria_id
+  `);
+
+  const rows = result.rows;
+
+  const map = {};
+
+  rows.forEach(r => {
+    if (!map[r.alternative_id]) {
+      map[r.alternative_id] = {
+        alternative_id: r.alternative_id,
+        alternative_name: r.alternative_name,
+        criteria_values: []
+      };
+    }
+
+    map[r.alternative_id].criteria_values.push({
+      criteria_name: r.criteria_name,
+      value: r.value
+    });
+  });
+
+  return Object.values(map);
+}
     
 }
 

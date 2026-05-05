@@ -29,6 +29,8 @@ const criteriaRoutes = require('./routes/criteria.routes');
 const alternativeRoutes = require('./routes/alternative.routes');
 const spkRoutes = require('./routes/spk.routes');
 const valueRoutes = require('./routes/value.routes'); // Tambahkan ini
+const mlRoutes = require('./routes/ml.routes');
+app.use('/api/v1/ml', mlRoutes);
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/cases', caseRoutes);

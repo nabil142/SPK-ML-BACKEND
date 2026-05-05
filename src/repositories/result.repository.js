@@ -51,6 +51,16 @@ class ResultRepository {
         const { rows } = await db.query(query, [caseId, method]);
         return rows;
     }
+
+static async getAllResults(method) {
+  const result = await db.query(`
+    SELECT alternative_id, score
+    FROM results
+    WHERE method = $1
+  `, [method]);
+
+  return result.rows;
+}
     
 }
 
