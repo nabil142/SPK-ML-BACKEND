@@ -137,60 +137,43 @@ class CriteriaRepository {
     }
 
     // ── GET ALL UNIQUE CRITERIA ────────────────
-    static async getAllCriteriaFrequency() {
+static async getAllCriteriaFrequency(
+    userId
+) {
 
-        const query = `
-            SELECT
+    const query = `
 
-                LOWER(
-                    REGEXP_REPLACE(
-                        TRIM(criteria_name),
-                        '\\s+',
-                        '_',
-                        'g'
-                    )
-                ) AS normalized_name,
+        SELECT
 
-                MIN(criteria_name) AS criteria_name,
+            criteria_name,
 
-                MIN(criteria_type) AS type
+            criteria_type AS type,
 
-            FROM criteria
+            COUNT(*)::int AS total
 
-            GROUP BY normalized_name
+        FROM criteria c
 
-            ORDER BY criteria_name ASC;
-        `
+        JOIN decision_case dc
+            ON dc.case_id = c.case_id
 
-        const { rows } =
-            await db.query(query)
+        WHERE dc.user_id = $1
 
-        return rows
-    }
-    static async getAllCriteriaFrequency() {
+        GROUP BY
+            criteria_name,
+            criteria_type
 
-  const query = `
-    SELECT
-      c.criteria_name,
-      c.criteria_type AS type,
-      COUNT(av.criteria_id) AS total
+        ORDER BY total DESC
+    `
 
-    FROM criteria c
+    const { rows } =
+        await db.query(
+            query,
+            [userId]
+        )
 
-    LEFT JOIN alternative_values av
-      ON av.criteria_id = c.criteria_id
-
-    GROUP BY
-      c.criteria_name,
-      c.criteria_type
-
-    ORDER BY total DESC
-  `
-
-  const { rows } = await db.query(query)
-
-  return rows
+    return rows
 }
+
 }
 
 module.exports = CriteriaRepository

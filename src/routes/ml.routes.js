@@ -1,41 +1,43 @@
 
-const express = require('express')
+const express =
+require('express')
 
-const router = express.Router()
+const router =
+express.Router()
 
 const MLController =
-  require('../controllers/ml.controller')
+require('../controllers/ml.controller')
 
-// ─────────────────────────────────────
-// GET ALL CRITERIA OPTIONS
-// ─────────────────────────────────────
+const authMiddleware =
+require('../middlewares/auth.middleware')
+
+// ───────────────────────────────────
+// GET CRITERIA OPTIONS
+// ───────────────────────────────────
 router.get(
-  '/criteria-options',
-  MLController.getCriteriaOptions
+    '/criteria-options',
+    authMiddleware,
+    MLController.getCriteriaOptions
 )
 
-// ─────────────────────────────────────
+// ───────────────────────────────────
 // GET DATASET
-// ─────────────────────────────────────
+// ───────────────────────────────────
 router.get(
-  '/dataset',
-  MLController.getDataset
+    '/dataset',
+    authMiddleware,
+    MLController.getDataset
 )
 
-// ─────────────────────────────────────
-// DYNAMIC PREDICT
-// ─────────────────────────────────────
-router.post(
-  '/predict',
-  MLController.predictDynamic
-)
-
-// ─────────────────────────────────────
+// ───────────────────────────────────
 // SAVE PREDICTION
-// ─────────────────────────────────────
+// ───────────────────────────────────
 router.post(
-  '/save-prediction',
-  MLController.savePrediction
+    '/save-prediction',
+    authMiddleware,
+    MLController.savePrediction
 )
 
-module.exports = router
+module.exports =
+router
+

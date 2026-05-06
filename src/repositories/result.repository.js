@@ -61,6 +61,42 @@ static async getAllResults(method) {
 
   return result.rows;
 }
+
+// ───────────────────────────────────
+// GET RESULTS BY USER
+// ───────────────────────────────────
+static async getAllResultsByUser(
+    method,
+    userId
+) {
+
+    const query = `
+
+        SELECT
+            r.*
+
+        FROM results r
+
+        JOIN decision_case dc
+            ON dc.case_id = r.case_id
+
+        WHERE
+            r.method = $1
+            AND dc.user_id = $2
+
+        ORDER BY r.ranking ASC
+    `
+
+    const { rows } =
+        await db.query(
+            query,
+            [method, userId]
+        )
+
+    return rows
+}
+
+
     
 }
 
