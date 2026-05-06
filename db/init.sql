@@ -92,17 +92,20 @@ CREATE TABLE ml_training_data (
     FOREIGN KEY (alternative_id) REFERENCES alternatives(alternative_id)
 );
 
+
 CREATE TABLE ml_predictions (
+
     prediction_id SERIAL PRIMARY KEY,
-    case_id INT,
-    alternative_id INT,
-    model_id INT,
-    predicted_score FLOAT,
-    predicted_rank INT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (case_id) REFERENCES decision_case(case_id),
-    FOREIGN KEY (alternative_id) REFERENCES alternatives(alternative_id),
-    FOREIGN KEY (model_id) REFERENCES ml_models(model_id)
+
+    alternative_name VARCHAR(255) NOT NULL,
+
+    criteria_used TEXT[] NOT NULL,
+
+    predicted_score NUMERIC(12,6) NOT NULL,
+
+    predicted_rank INTEGER NOT NULL,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE alternative_comparisons (

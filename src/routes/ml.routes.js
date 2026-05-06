@@ -1,15 +1,41 @@
-const express = require('express');
-const router = express.Router();
-const MLController = require('../controllers/ml.controller');
-const authMiddleware = require('../middlewares/auth.middleware');
 
+const express = require('express')
 
-// 🔥 GLOBAL DATASET (tanpa caseId)
-router.get('/dataset', MLController.getDataset);
+const router = express.Router()
 
-// 🔥 TOP 3 KRITERIA (untuk frontend input)
-router.get('/criteria', MLController.getTopCriteria);
+const MLController =
+  require('../controllers/ml.controller')
 
-router.post('/save-prediction', MLController.savePrediction);
+// ─────────────────────────────────────
+// GET ALL CRITERIA OPTIONS
+// ─────────────────────────────────────
+router.get(
+  '/criteria-options',
+  MLController.getCriteriaOptions
+)
 
-module.exports = router;
+// ─────────────────────────────────────
+// GET DATASET
+// ─────────────────────────────────────
+router.get(
+  '/dataset',
+  MLController.getDataset
+)
+
+// ─────────────────────────────────────
+// DYNAMIC PREDICT
+// ─────────────────────────────────────
+router.post(
+  '/predict',
+  MLController.predictDynamic
+)
+
+// ─────────────────────────────────────
+// SAVE PREDICTION
+// ─────────────────────────────────────
+router.post(
+  '/save-prediction',
+  MLController.savePrediction
+)
+
+module.exports = router

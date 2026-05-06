@@ -1,61 +1,169 @@
-const MLService = require('../services/ml/ml.service');
+
+const MLService =
+  require('../services/ml/ml.service')
+
+const db =
+  require('../config/db')
 
 class MLController {
 
-    // 🔥 GET DATASET GLOBAL
-    static async getDataset(req, res) {
-        try {
-            const method = req.query.method || 'SAW';
+  // ───────────────────────────────────
+  // GET DATASET
+  // ───────────────────────────────────
+  static async getDataset(req, res) {
 
-            const dataset = await MLService.generateDataset(method);
+    try {
 
-            res.status(200).json({
-                message: `Dataset global ${method.toUpperCase()} berhasil digenerate`,
-                data: dataset
-            });
-        } catch (error) {
-            console.error('Error ML Dataset:', error);
-            res.status(400).json({ error: error.message });
-        }
+      const method =
+        req.query.method || 'SAW'
+
+      const dataset =
+        await MLService.generateDataset(
+          method
+        )
+
+      res.status(200).json({
+
+        message:
+          'Dataset berhasil digenerate',
+
+        data: dataset
+      })
+
+    } catch (error) {
+
+      console.error(error)
+
+      res.status(500).json({
+
+        error: error.message
+      })
     }
+  }
 
-    // 🔥 TAMBAHAN: GET TOP 3 KRITERIA
-    static async getTopCriteria(req, res) {
-        try {
-            const criteria = await MLService.getTopCriteria();
+  // ───────────────────────────────────
+  // GET CRITERIA OPTIONS
+  // ───────────────────────────────────
+  static async getCriteriaOptions(
+    req,
+    res
+  ) {
 
-            res.status(200).json({
-                message: 'Top kriteria berhasil diambil',
-                data: criteria
-            });
-        } catch (error) {
-            console.error('Error ML Criteria:', error);
-            res.status(400).json({ error: error.message });
-        }
+    try {
+
+      const data =
+        await MLService.getCriteriaOptions()
+
+      res.status(200).json({
+
+        message:
+          'Kriteria berhasil diambil',
+
+        data
+      })
+
+    } catch (error) {
+
+      console.error(error)
+
+      res.status(500).json({
+
+        error: error.message
+      })
     }
+  }
 
-    static async savePrediction(req, res) {
-  try {
-    const { predicted_score, predicted_rank } = req.body;
+  // ───────────────────────────────────
+  // PREDICT DYNAMIC
+  // ───────────────────────────────────
+  static async predictDynamic(
+    req,
+    res
+  ) {
 
-    const result = await require('../config/db').query(
-      `INSERT INTO ml_predictions (predicted_score, predicted_rank, created_at)
-       VALUES ($1, $2, NOW())
-       RETURNING *`,
-      [predicted_score, predicted_rank]
-    );
+    try {
 
-    res.status(201).json({
-      message: 'Prediksi berhasil disimpan',
-      data: result.rows[0]
-    });
+      res.status(200).json({
 
-  } catch (error) {
-    console.error('Error save prediction:', error);
-    res.status(500).json({ error: 'Gagal menyimpan prediksi' });
+        message:
+          'Gunakan Python backend untuk prediksi'
+      })
+
+    } catch (error) {
+
+      console.error(error)
+
+      res.status(500).json({
+
+        error: error.message
+      })
+    }
+  }
+
+  // ───────────────────────────────────
+  // SAVE PREDICTION
+  // ───────────────────────────────────
+  static async savePrediction(
+    req,
+    res
+  ) {
+
+    try {
+
+      const {
+        alternative_name,
+        criteria_used,
+        predicted_score,
+        predicted_rank
+      } = req.body
+
+      const result =
+        await db.query(
+          `
+          INSERT INTO ml_predictions
+          (
+            alternative_name,
+            criteria_used,
+            predicted_score,
+            predicted_rank
+          )
+          VALUES
+          (
+            $1,
+            $2,
+            $3,
+            $4
+          )
+          RETURNING *
+          `,
+          [
+            alternative_name,
+            criteria_used,
+            predicted_score,
+            predicted_rank
+          ]
+        )
+
+      res.status(201).json({
+
+        message:
+          'Prediksi berhasil disimpan',
+
+        data:
+          result.rows[0]
+      })
+
+    } catch (error) {
+
+      console.error(error)
+
+      res.status(500).json({
+
+        error:
+          'Gagal menyimpan prediksi'
+      })
+    }
   }
 }
 
-}
-
-module.exports = MLController;
+module.exports =MLController

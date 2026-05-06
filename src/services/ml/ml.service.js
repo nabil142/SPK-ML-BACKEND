@@ -1,103 +1,223 @@
-const CriteriaRepository = require('../../repositories/criteria.repository');
-const AlternativeRepository = require('../../repositories/alternative.repository');
-const ResultRepository = require('../../repositories/result.repository');
+
+const CriteriaRepository = require('../../repositories/criteria.repository')
+const AlternativeRepository = require('../../repositories/alternative.repository')
+const ResultRepository = require('../../repositories/result.repository')
 
 class MLService {
 
-    // 🔥 NORMALIZE NAMA KRITERIA
-    static normalize(name) {
-        return name.toLowerCase().trim().replace(/\s+/g, '_');
+  // ── NORMALIZE ───────────────────────────────
+  static normalize(name) {
+
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '_')
+  }
+
+  // ── GET ALL CRITERIA ────────────────────────
+
+static async getCriteriaOptions() {
+
+    const rows =
+        await CriteriaRepository
+            .getAllCriteriaFrequency()
+
+    return rows.map(r => ({
+
+        // 🔥 VALUE UNTUK SYSTEM
+        name: this.normalize(
+            r.criteria_name
+        ),
+
+        // 🔥 LABEL UNTUK UI
+        label: r.criteria_name,
+
+        // 🔥 TYPE
+        type:
+            r.type || 'benefit',
+
+        // 🔥 TOTAL
+        total:
+            Number(r.total)
+    }))
+}
+
+
+  // ── GENERATE DATASET DYNAMIC ────────────────
+
+static async generateDataset(
+    method = 'SAW'
+) {
+
+    const methodUpper =
+        method.toUpperCase()
+
+    // ─────────────────────────────
+    // GET ALL CRITERIA
+    // ─────────────────────────────
+    const criteria =
+        await this.getCriteriaOptions()
+
+    if (
+        criteria.length < 1
+    ) {
+
+        throw new Error(
+            'Belum ada kriteria'
+        )
     }
 
-    // 🔥 AMBIL TOP 3 KRITERIA GLOBAL
-    static async getTopCriteria() {
-        const rows = await CriteriaRepository.getAllCriteriaFrequency();
+    // 🔥 NORMALIZED FEATURE NAME
+    const featureNames =
+        criteria.map(c => c.name)
 
-        // sort berdasarkan frekuensi terbanyak
-        rows.sort((a, b) => b.total - a.total);
+    // ─────────────────────────────
+    // GET ALTERNATIVES
+    // ─────────────────────────────
+    const alternatives =
+        await AlternativeRepository
+            .findAllWithCriteria()
 
-        // ambil top 3
-        return rows.slice(0, 3).map(r => this.normalize(r.criteria_name));
+    if (
+        !alternatives.length
+    ) {
+
+        throw new Error(
+            'Belum ada alternatif'
+        )
     }
 
-    /**
-     * 🔥 GENERATE DATASET GLOBAL (TANPA caseId)
-     */
-    static async generateDataset(method = 'SAW') {
-        const methodUpper = method.toUpperCase();
+    // ─────────────────────────────
+    // GET RESULT SPK
+    // ─────────────────────────────
+    const results =
+        await ResultRepository
+            .getAllResults(
+                methodUpper
+            )
 
-        // 🔥 1. Ambil TOP 3 KRITERIA GLOBAL
-        const topCriteria = await this.getTopCriteria();
+    if (
+        !results.length
+    ) {
 
-        if (topCriteria.length < 3) {
-            throw new Error('Kriteria tidak cukup untuk training ML.');
-        }
+        throw new Error(
+            `Belum ada hasil ${methodUpper}`
+        )
+    }
 
-        // 🔥 2. Ambil SEMUA alternatif (GLOBAL)
-        const alternatives = await AlternativeRepository.findAllWithCriteria();
+    // ─────────────────────────────
+    // MAP SCORE
+    // ─────────────────────────────
+    const scoreMap = {}
 
-        if (!alternatives.length) {
-            throw new Error('Belum ada data alternatif.');
-        }
+    results.forEach(r => {
 
-        // 🔥 3. Ambil SEMUA hasil SPK (GLOBAL)
-        const results = await ResultRepository.getAllResults(methodUpper);
+        scoreMap[
+            r.alternative_id
+        ] = parseFloat(r.score)
+    })
 
-        if (!results.length) {
-            throw new Error(
-                `Belum ada hasil kalkulasi ${methodUpper}. Jalankan perhitungan terlebih dahulu.`
-            );
-        }
+    // ─────────────────────────────
+    // BUILD DATASET
+    // ─────────────────────────────
+    const samples = []
 
-        // 🔥 4. Map alternative_id → score
-        const scoreMap = {};
-        results.forEach(r => {
-            scoreMap[r.alternative_id] = parseFloat(r.score);
-        });
+    for (const alt of alternatives) {
 
-        // 🔥 5. SUSUN DATASET
-        const samples = [];
+        if (
+            scoreMap[
+                alt.alternative_id
+            ] === undefined
+        ) continue
 
-        for (const alt of alternatives) {
+        const featureObj = {}
 
-            // skip kalau tidak ada score
-            if (scoreMap[alt.alternative_id] === undefined) continue;
+        // init semua feature
+        featureNames.forEach(name => {
 
-            // default semua fitur = 0
-            const featureObj = {};
-            topCriteria.forEach(c => featureObj[c] = 0);
+            featureObj[name] = 0
+        })
 
-            // isi nilai berdasarkan data
-            alt.criteria_values.forEach(v => {
-                const key = this.normalize(v.criteria_name);
+        // isi value
+        alt.criteria_values.forEach(v => {
 
-                if (topCriteria.includes(key)) {
-                    featureObj[key] = parseFloat(v.value);
-                }
-            });
+            const key =
+                this.normalize(
+                    v.criteria_name
+                )
 
-            // ubah ke array sesuai urutan topCriteria
-            const features = topCriteria.map(c => featureObj[c]);
+            if (
+                featureNames.includes(key)
+            ) {
 
-            samples.push({
-                alternative_id: alt.alternative_id,
-                alternative_name: alt.alternative_name,
-                features,
-                score: scoreMap[alt.alternative_id]
-            });
-        }
+                featureObj[key] =
+                    parseFloat(v.value)
+            }
+        })
 
-        if (samples.length < 3) {
-            throw new Error(
-                `Dataset hanya memiliki ${samples.length} sampel. Minimal 3 dibutuhkan.`
-            );
-        }
+        // array sesuai urutan feature
+        const features =
+            featureNames.map(name =>
+                featureObj[name]
+            )
 
-        return {
-            feature_names: topCriteria,
-            samples
-        };
+        samples.push({
+
+            alternative_id:
+                alt.alternative_id,
+
+            alternative_name:
+                alt.alternative_name,
+
+            features,
+
+            score:
+                scoreMap[
+                    alt.alternative_id
+                ]
+        })
+    }
+
+    // ─────────────────────────────
+    // RETURN FINAL
+    // ─────────────────────────────
+    return {
+
+        feature_info: criteria,
+
+        samples
     }
 }
 
-module.exports = MLService;
+
+
+  // ── AUTO TRAIN + PREDICT ────────────────────
+  static async predictDynamic(
+    method,
+    criteria,
+    features
+  ) {
+
+    // generate dataset dinamis
+    const dataset =
+      await this.generateDataset(
+        method,
+        criteria
+      )
+
+    // kirim ke python
+    const response = await axios.post(
+      'http://python-ml:8000/predict-dynamic',
+      {
+        method,
+        dataset,
+        features,
+        selected_criteria: criteria
+      }
+    )
+
+    return response.data
+  }
+}
+
+module.exports = MLService
